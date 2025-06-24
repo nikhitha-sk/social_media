@@ -1,0 +1,5 @@
+npm init
+npm install
+npm install express
+npm install --save-dev nodemon
+npm run dev / node app.js
