@@ -3,3 +3,12 @@ npm install
 npm install express
 npm install --save-dev nodemon
 npm run dev / node app.js
+
+npm install express ejs body-parser cookie-parser mongoose bcryptjs
+
+
+
+username
+add friend search display all users
+friends chat specific chat room
+group chat create group add 
