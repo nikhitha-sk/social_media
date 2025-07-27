@@ -2,6 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const Post = require('../models/Post');
 
 const router = express.Router();
 
@@ -33,8 +34,10 @@ router.get('/nickname', isLoggedIn, (req, res) => {
 });
 
 // Home page
-router.get('/home', isLoggedIn, (req, res) => {
-  res.render('home', { user: req.user });
+router.get('/home', async (req, res) => {
+  if (!req.isAuthenticated()) return res.redirect('/login');
+  const posts = await Post.find().populate('user').sort({ createdAt: -1 });
+  res.render('home', { user: req.user, posts });
 });
 
 // Logout

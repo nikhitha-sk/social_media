@@ -3,4 +3,18 @@
   <img src="<%= user.profilePic %>" alt="Profile" width="40" height="40" style="border-radius: 50%; vertical-align: middle;">
 </a>
 
+<br>
+
+<h2>Feed</h2>
+<% posts.forEach(post => { %>
+  <div class="post">
+    <img src="/uploads/<%= post.image %>" alt="Post image" width="300" />
+    <p><strong><%= post.user.nickname || post.user.email %>:</strong> <%= post.caption %></p>
+    <p><small><%= new Date(post.createdAt).toLocaleString() %></small></p>
+  </div>
+<% }); %>
+<a href="/posts/create" class="plus-icon">+</a>
+
+<br>
+
 <a href="/logout">Logout</a>

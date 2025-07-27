@@ -4,6 +4,8 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 const userRoutes = require('./routes/user');
+const postRoutes = require('./routes/post');
+const path = require('path');
 require('dotenv').config();
 require('./passportConfig');
 
@@ -34,6 +36,10 @@ const authRoutes = require('./routes/auth');
 app.use('/', authRoutes);
 
 app.use('/', userRoutes);
+
+app.use('/posts', postRoutes);
+app.use(express.static(path.join(__dirname, 'public')));
+
 
 // Start server
 app.listen(process.env.PORT, () => {
