@@ -5,15 +5,37 @@
 
 <br>
 
-<h2>Feed</h2>
+<h2>Latest Posts</h2>
+
 <% posts.forEach(post => { %>
-  <div class="post">
-    <img src="/uploads/<%= post.image %>" alt="Post image" width="300" />
-    <p><strong><%= post.user.nickname || post.user.email %>:</strong> <%= post.caption %></p>
-    <p><small><%= new Date(post.createdAt).toLocaleString() %></small></p>
+  <div class="post-card">
+    <div class="user-info">
+      <% if (post.userId) { %>
+        <img src="/uploads/<%= post.userId.profilePicture %>" alt="profile" width="40" height="40" style="border-radius: 50%;">
+        <strong><%= post.userId.nickname %></strong>
+      <% } else { %>
+        <img src="/default-profile.png" width="40" height="40" style="border-radius: 50%;">
+        <strong>Unknown User</strong>
+      <% } %>
+    </div>
+
+    <div class="post-image">
+      <img src="/uploads/<%= post.image %>" alt="post" style="max-width: 100%; height: auto;">
+    </div>
+
+    <div class="caption">
+      <p><%= post.caption %></p>
+      <small><%= new Date(post.createdAt).toLocaleString() %></small>
+    </div>
   </div>
-<% }); %>
+  <hr>
+<% }) %>
+
 <a href="/posts/create" class="plus-icon">+</a>
+
+  </div>
+  <hr>
+
 
 <br>
 
