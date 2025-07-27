@@ -6,3 +6,6 @@
 </form>
 <a href="/auth/google">Login with Google</a><br>
 <a href="/signup">Sign Up</a>
+<% if (error) { %>
+  <p style="color: red;"><%= error %></p>
+<% } %>
