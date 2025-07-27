@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Your Profile</title>
+</head>
+<body>
+  <h2>Your Profile</h2>
+
+  <img src="<%= user.profilePic %>" alt="Profile Picture" width="150" height="150" style="border-radius: 50%;"><br>
+  <p><strong>Nickname:</strong> <%= user.nickname %></p>
+  <p><strong>Email:</strong> <%= user.email %></p>
+
+  <h3>Change Profile Picture</h3>
+  <form action="/profile/upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="profilePic" accept="image/*" required>
+    <button type="submit">Upload</button>
+  </form>
+
+  <br>
+  <a href="/home">← Back to Home</a>
+</body>
+</html>
