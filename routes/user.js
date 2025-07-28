@@ -11,29 +11,28 @@ function isAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
         return next();
     }
+    req.flash('error', 'Please log in to view this page.'); // Add flash message for unauthenticated access
     res.redirect('/login');
 }
 
 // Multer storage for profile pictures
 const profilePicStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '../public/uploads/profile_pics')); // Dedicated folder for profile pics
+        cb(null, path.join(__dirname, '../public/uploads/profile_pics'));
     },
     filename: function (req, file, cb) {
-        // Use user ID for unique filename for their profile pic
         cb(null, req.user._id + '-' + Date.now() + path.extname(file.originalname));
     }
 });
 
 const uploadProfilePic = multer({ storage: profilePicStorage });
 
-// NEW: GET Current User's Profile Page (no ID in URL)
+// GET Current User's Profile Page (no ID in URL)
 router.get('/profile', isAuthenticated, async (req, res) => {
     try {
-        const profileUser = req.user; // Current logged-in user
+        const profileUser = req.user;
         const isCurrentUser = true;
 
-        // Fetch all posts by this user
         const userPosts = await Post.find({ userId: profileUser._id })
                                     .sort({ createdAt: -1 })
                                     .populate('userId');
@@ -41,22 +40,22 @@ router.get('/profile', isAuthenticated, async (req, res) => {
         res.render('profile', { user: req.user, profileUser, posts: userPosts, isCurrentUser });
     } catch (err) {
         console.error("Error fetching current user profile:", err);
-        res.status(500).send("Something went wrong fetching your profile.");
+        req.flash('error', 'Something went wrong fetching your profile.');
+        res.status(500).redirect('/home'); // Redirect to home on error
     }
 });
 
-// NEW: GET Another User's Profile Page (with ID in URL)
+// GET Another User's Profile Page (with ID in URL)
 router.get('/profile/:id', isAuthenticated, async (req, res) => {
     try {
         const profileUser = await User.findById(req.params.id);
         if (!profileUser) {
-            return res.status(404).send("User not found.");
+            req.flash('error', 'User not found.');
+            return res.status(404).redirect('/home'); // Redirect to home if user not found
         }
 
-        // Check if the requested profile belongs to the logged-in user
         const isCurrentUser = profileUser._id.equals(req.user._id);
 
-        // Fetch all posts by the profileUser
         const userPosts = await Post.find({ userId: profileUser._id })
                                     .sort({ createdAt: -1 })
                                     .populate('userId');
@@ -64,34 +63,36 @@ router.get('/profile/:id', isAuthenticated, async (req, res) => {
         res.render('profile', { user: req.user, profileUser, posts: userPosts, isCurrentUser });
     } catch (err) {
         console.error("Error fetching other user profile:", err);
-        res.status(500).send("Something went wrong fetching the profile.");
+        req.flash('error', 'Something went wrong fetching the profile.');
+        res.status(500).redirect('/home'); // Redirect to home on error
     }
 });
-
 
 // POST route to update user nickname (only for current user)
 router.post('/profile/update-nickname', isAuthenticated, async (req, res, next) => {
     try {
         const newNickname = req.body.nickname;
         if (!newNickname || newNickname.trim() === '') {
-            return res.status(400).send("Nickname cannot be empty.");
+            req.flash('error', 'Nickname cannot be empty.');
+            return res.status(400).redirect('/profile');
         }
 
         const updatedUser = await User.findByIdAndUpdate(
             req.user._id,
             { nickname: newNickname.trim() },
-            { new: true } // Return the updated document
+            { new: true }
         );
 
-        // Update the user object in the session
         req.login(updatedUser, (err) => {
             if (err) return next(err);
-            res.redirect('/profile'); // Redirect back to profile page
+            req.flash('success', 'Nickname updated successfully!');
+            res.redirect('/profile');
         });
 
     } catch (err) {
         console.error("Error updating nickname:", err);
-        res.status(500).send("Something went wrong updating your nickname.");
+        req.flash('error', 'Something went wrong updating your nickname.');
+        res.status(500).redirect('/profile');
     }
 });
 
@@ -99,22 +100,21 @@ router.post('/profile/update-nickname', isAuthenticated, async (req, res, next) 
 router.post('/profile/update-profile-pic', isAuthenticated, uploadProfilePic.single('profilePic'), async (req, res, next) => {
     try {
         if (!req.file) {
-            return res.status(400).send("No profile picture file uploaded.");
+            req.flash('error', 'No profile picture file uploaded.');
+            return res.status(400).redirect('/profile');
         }
 
-        const oldProfilePic = req.user.profilePic; // Get the current profile pic path
+        const oldProfilePic = req.user.profilePic;
 
         const updatedUser = await User.findByIdAndUpdate(
             req.user._id,
-            { profilePic: '/uploads/profile_pics/' + req.file.filename }, // Save new path
+            { profilePic: '/uploads/profile_pics/' + req.file.filename },
             { new: true }
         );
 
-        // Update the user object in the session
         req.login(updatedUser, (err) => {
             if (err) return next(err);
 
-            // Delete old profile picture if it's not the default one
             if (oldProfilePic && oldProfilePic !== '/default_profile.jpg' && oldProfilePic.startsWith('/uploads/profile_pics/')) {
                 const oldImagePath = path.join(__dirname, '../public', oldProfilePic);
                 fs.unlink(oldImagePath, (err) => {
@@ -125,14 +125,63 @@ router.post('/profile/update-profile-pic', isAuthenticated, uploadProfilePic.sin
                     }
                 });
             }
-            res.redirect('/profile'); // Redirect back to profile page
+            req.flash('success', 'Profile picture updated successfully!');
+            res.redirect('/profile');
         });
 
     } catch (err) {
         console.error("Error updating profile picture:", err);
-        res.status(500).send("Something went wrong updating your profile picture.");
+        req.flash('error', 'Something went wrong updating your profile picture.');
+        res.status(500).redirect('/profile');
     }
 });
 
+// POST route to follow/unfollow a user
+router.post('/user/follow/:id', isAuthenticated, async (req, res, next) => {
+    try {
+        const targetUserId = req.params.id;
+        const currentUserId = req.user._id;
+
+        if (targetUserId.toString() === currentUserId.toString()) {
+            req.flash('error', 'You cannot follow or unfollow yourself.');
+            return res.status(400).redirect('/profile/' + targetUserId);
+        }
+
+        const targetUser = await User.findById(targetUserId);
+        const currentUser = await User.findById(currentUserId);
+
+        if (!targetUser || !currentUser) {
+            req.flash('error', 'User not found.');
+            return res.status(404).redirect('/home');
+        }
+
+        const isFollowing = currentUser.following.some(id => id.equals(targetUserId));
+        let message = '';
+
+        if (isFollowing) {
+            currentUser.following.pull(targetUserId);
+            targetUser.followers.pull(currentUserId);
+            message = `You unfollowed ${targetUser.nickname || targetUser.email}.`;
+        } else {
+            currentUser.following.push(targetUserId);
+            targetUser.followers.push(currentUserId);
+            message = `You are now following ${targetUser.nickname || targetUser.email}!`;
+        }
+
+        await Promise.all([currentUser.save(), targetUser.save()]);
+
+        const updatedCurrentUser = await User.findById(currentUserId);
+        req.login(updatedCurrentUser, (err) => {
+            if (err) return next(err);
+            req.flash('success', message); // Set success message
+            res.redirect('/profile/' + targetUserId); // Explicitly redirect to the target user's profile
+        });
+
+    } catch (err) {
+        console.error("Error following/unfollowing user:", err);
+        req.flash('error', 'Something went wrong with following/unfollowing.');
+        res.status(500).redirect('/home'); // Redirect to home on error
+    }
+});
 
 module.exports = router;

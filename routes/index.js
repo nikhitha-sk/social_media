@@ -11,12 +11,17 @@ function isAuthenticated(req, res, next) {
     res.redirect('/login'); // Redirect to login if not authenticated
 }
 
-// GET Home Page - show all posts sorted by latest and all users
+// GET Home Page - show personalized feed and all users
 router.get('/home', isAuthenticated, async (req, res) => {
     try {
-        // Populate the 'userId' for the post creator
-        // AND populate 'userId' for each comment's creator
-        const posts = await Post.find({})
+        const user = req.user; // Logged-in user
+
+        // Get IDs of users the current user is following, plus the current user's own ID
+        const followedUserIds = user.following.map(id => id);
+        followedUserIds.push(user._id); // Include current user's own posts in the feed
+
+        // Fetch posts only from followed users (and current user)
+        const posts = await Post.find({ userId: { $in: followedUserIds } })
             .sort({ createdAt: -1 })
             .populate('userId') // Populates the post creator
             .populate({ // Populates the user for each comment
@@ -25,11 +30,9 @@ router.get('/home', isAuthenticated, async (req, res) => {
             }); 
 
         // Fetch all users for the "suggested users" list
-        const allUsers = await User.find({}); // Fetch all users
+        const allUsers = await User.find({});
 
-        const user = req.user; 
-        
-        res.render('home', { user, posts, allUsers }); // Pass allUsers to the template
+        res.render('home', { user, posts, allUsers });
     } catch (err) {
         console.error(err);
         res.status(500).send("Something went wrong.");

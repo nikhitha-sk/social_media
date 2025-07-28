@@ -4,6 +4,7 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 const path = require('path');
+const flash = require('connect-flash'); // <--- NEW: Import connect-flash
 require('dotenv').config();
 require('./passportConfig');
 
@@ -12,13 +13,13 @@ const app = express();
 // DB connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("MongoDB Connected"))
-    .catch(err => console.error("MongoDB connection error:", err)); // Added error handling for clarity
+    .catch(err => console.error("MongoDB connection error:", err));
 
 // Middleware
-app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
-app.use(express.json()); // Add this if you're also sending JSON data in requests
-app.use(express.static('public')); // Serve static files from 'public' directory
-app.set('view engine', 'ejs'); // Set EJS as the view engine
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.static('public'));
+app.set('view engine', 'ejs');
 
 // Session middleware
 app.use(session({
@@ -32,25 +33,29 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Flash messages middleware (MUST come after session middleware)
+app.use(flash()); // <--- NEW: Use connect-flash
+
+// Make flash messages available in all templates
+app.use((req, res, next) => {
+    res.locals.success_msg = req.flash('success');
+    res.locals.error_msg = req.flash('error');
+    next();
+});
+
 // --- ROUTES ---
-// Import your route files
 const authRoutes = require('./routes/auth');
-const indexRoutes = require('./routes/index'); // <--- NEW: Import index routes
-const userRoutes = require('./routes/user'); // Assuming this handles profile, settings etc.
-const postRoutes = require('./routes/post'); // Assuming this handles post creation, deletion etc.
+const indexRoutes = require('./routes/index');
+const userRoutes = require('./routes/user');
+const postRoutes = require('./routes/post');
 
-// Use your route files
-// Order matters: authRoutes often comes first for login/signup/logout handling
 app.use('/', authRoutes);
-app.use('/', indexRoutes); // <--- NEW: Use index routes (contains /home)
-app.use('/', userRoutes); // Use user routes
-app.use('/posts', postRoutes); // Use post-specific routes under /posts prefix
-
-// This line is redundant if 'public' is already handled by app.use(express.static('public'));
-// app.use(express.static(path.join(__dirname, 'public'))); 
+app.use('/', indexRoutes);
+app.use('/', userRoutes);
+app.use('/posts', postRoutes);
 
 // Start server
-const PORT = process.env.PORT || 3000; // Use a default port if not specified in .env
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server started on port ${PORT}`);
 });
