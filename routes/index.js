@@ -8,19 +8,22 @@ function isAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
         return next();
     }
-    res.redirect('/login'); // Redirect to login if not authenticated
+    res.redirect('/login');
 }
 
 // GET Home Page - show all posts sorted by latest
-// This is the PRIMARY /home route and MUST be in routes/index.js
 router.get('/home', isAuthenticated, async (req, res) => {
     try {
-        // Populate the 'userId' field to get user details (nickname, profilePic)
+        // Populate the 'userId' for the post creator
+        // AND populate 'userId' for each comment's creator
         const posts = await Post.find({})
             .sort({ createdAt: -1 })
-            .populate('userId'); 
+            .populate('userId') // Populates the post creator
+            .populate({ // Populates the user for each comment
+                path: 'comments.userId',
+                model: 'User'
+            }); 
 
-        // req.user is populated by Passport.js after successful authentication
         const user = req.user; 
         
         res.render('home', { user, posts });
