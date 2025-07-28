@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
   password: String, // only for local strategy
   googleId: String,
   nickname: String,
-  profilePic: { type: String, default: '/default-profile.png'}
+  profilePic: { type: String, default: '/default_profile.jpg'}
 });
 
 module.exports = mongoose.model('User', userSchema);

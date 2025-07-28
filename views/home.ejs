@@ -9,12 +9,14 @@
 
 <% posts.forEach(post => { %>
   <div class="post-card">
+
     <div class="user-info">
-      <% if (post.userId) { %>
-        <img src="/uploads/<%= post.userId.profilePicture %>" alt="profile" width="40" height="40" style="border-radius: 50%;">
-        <strong><%= post.userId.nickname %></strong>
+      <% if (post.userId && post.userId.profilePic) { %>
+        <img src="<%= post.userId.profilePic.startsWith('/') ? post.userId.profilePic : '/uploads/' + post.userId.profilePic %>" 
+             alt="profile" width="40" height="40" style="border-radius: 50%;">
+        <strong><%= post.userId.nickname || 'No name' %></strong>
       <% } else { %>
-        <img src="/default-profile.png" width="40" height="40" style="border-radius: 50%;">
+        <img src="/default_profile.jpg" width="40" height="40" style="border-radius: 50%;">
         <strong>Unknown User</strong>
       <% } %>
     </div>
