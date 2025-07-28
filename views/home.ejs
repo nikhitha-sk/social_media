@@ -29,15 +29,20 @@
       <p><%= post.caption %></p>
       <small><%= new Date(post.createdAt).toLocaleString() %></small>
     </div>
+
+    <% // NEW FEATURE: Conditionally display delete button %>
+    <% if (post.userId && user && post.userId._id.toString() === user._id.toString()) { %>
+      <div class="post-actions">
+        <form action="/posts/delete/<%= post._id %>" method="POST" onsubmit="return confirm('Are you sure you want to delete this post?');">
+          <button type="submit" style="background-color: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">Delete</button>
+        </form>
+      </div>
+    <% } %>
   </div>
   <hr>
 <% }) %>
 
 <a href="/posts/create" class="plus-icon">+</a>
-
-  </div>
-  <hr>
-
 
 <br>
 
