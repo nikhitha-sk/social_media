@@ -52,37 +52,27 @@ router.post('/create', isAuthenticated, upload.single('image'), async (req, res)
     }
 });
 
-// NEW FEATURE: POST route to handle post deletion
+// POST route to handle post deletion
 router.post('/delete/:id', isAuthenticated, async (req, res) => {
-    // --- DIAGNOSTIC LOG: Check if this route handler is reached ---
-    console.log(`Attempting to delete post with ID: ${req.params.id}`);
-    console.log(`Logged-in user ID: ${req.user._id}`);
-    // -----------------------------------------------------------
-
     try {
         const postId = req.params.id;
         const post = await Post.findById(postId);
 
         if (!post) {
-            console.log(`Post with ID ${postId} not found.`); // Diagnostic
             return res.status(404).send("Post not found.");
         }
 
         if (!post.userId.equals(req.user._id)) {
-            console.log(`User ${req.user._id} not authorized to delete post ${postId}. Owner: ${post.userId}`); // Diagnostic
             return res.status(403).send("You are not authorized to delete this post.");
         }
 
         await Post.findByIdAndDelete(postId);
-        console.log(`Post ${postId} deleted from DB.`); // Diagnostic
 
         // Optional: Delete the associated image file from the server
         const imagePath = path.join(__dirname, '../public/uploads', post.image);
         fs.unlink(imagePath, (err) => {
             if (err) {
                 console.error("Error deleting image file:", err);
-            } else {
-                console.log("Image file deleted successfully:", imagePath);
             }
         });
 
