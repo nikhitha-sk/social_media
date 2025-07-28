@@ -8,10 +8,10 @@ function isAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
         return next();
     }
-    res.redirect('/login');
+    res.redirect('/login'); // Redirect to login if not authenticated
 }
 
-// GET Home Page - show all posts sorted by latest
+// GET Home Page - show all posts sorted by latest and all users
 router.get('/home', isAuthenticated, async (req, res) => {
     try {
         // Populate the 'userId' for the post creator
@@ -24,9 +24,12 @@ router.get('/home', isAuthenticated, async (req, res) => {
                 model: 'User'
             }); 
 
+        // Fetch all users for the "suggested users" list
+        const allUsers = await User.find({}); // Fetch all users
+
         const user = req.user; 
         
-        res.render('home', { user, posts });
+        res.render('home', { user, posts, allUsers }); // Pass allUsers to the template
     } catch (err) {
         console.error(err);
         res.status(500).send("Something went wrong.");

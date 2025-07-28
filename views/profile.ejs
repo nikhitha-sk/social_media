@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= user.nickname || user.email %>'s Profile</title>
+    <title><%= profileUser.nickname || profileUser.email %>'s Profile</title>
     <!-- Include Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -17,7 +17,7 @@
             align-items: center;
             color: #333;
         }
-        h1, h2 {
+        h1, h2, h3 {
             color: #222;
             margin-bottom: 15px;
         }
@@ -79,10 +79,10 @@
         }
         .post-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Responsive grid */
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 15px;
             width: 100%;
-            max-width: 900px; /* Wider grid for posts */
+            max-width: 900px;
         }
         .post-grid-item {
             background-color: #fff;
@@ -93,7 +93,7 @@
         }
         .post-grid-item img {
             width: 100%;
-            height: 180px; /* Fixed height for grid images */
+            height: 180px;
             object-fit: cover;
             display: block;
         }
@@ -119,29 +119,32 @@
 <body>
 
 <div class="profile-section">
-    <img src="<%= user.profilePic %>" alt="Profile Picture" class="profile-pic-large">
+    <img src="<%= profileUser.profilePic.startsWith('/') ? profileUser.profilePic : '/uploads/profile_pics/' + profileUser.profilePic %>" 
+         alt="Profile Picture" class="profile-pic-large" onerror="this.src='/default_profile.jpg'">
     <div class="profile-info">
-        <h2><%= user.nickname || user.email %></h2>
-        <p><%= user.email %></p>
+        <h2><%= profileUser.nickname || profileUser.email %></h2>
+        <p><%= profileUser.email %></p>
     </div>
 
-    <h3>Update Profile</h3>
-    <div class="profile-form">
-        <h4>Change Nickname</h4>
-        <form action="/profile/update-nickname" method="POST">
-            <input type="text" name="nickname" value="<%= user.nickname || '' %>" placeholder="Enter new nickname" required>
-            <button type="submit">Update Nickname</button>
-        </form>
+    <% if (isCurrentUser) { %>
+        <h3>Update Profile</h3>
+        <div class="profile-form">
+            <h4>Change Nickname</h4>
+            <form action="/profile/update-nickname" method="POST">
+                <input type="text" name="nickname" value="<%= profileUser.nickname || '' %>" placeholder="Enter new nickname" required>
+                <button type="submit">Update Nickname</button>
+            </form>
 
-        <h4>Change Profile Picture</h4>
-        <form action="/profile/update-profile-pic" method="POST" enctype="multipart/form-data">
-            <input type="file" name="profilePic" accept="image/*" required>
-            <button type="submit">Update Profile Picture</button>
-        </form>
-    </div>
+            <h4>Change Profile Picture</h4>
+            <form action="/profile/update-profile-pic" method="POST" enctype="multipart/form-data">
+                <input type="file" name="profilePic" accept="image/*" required>
+                <button type="submit">Update Profile Picture</button>
+            </form>
+        </div>
+    <% } %>
 </div>
 
-<h2>Your Posts</h2>
+<h2><%= isCurrentUser ? 'Your' : (profileUser.nickname || profileUser.email) + "'s" %> Posts</h2>
 
 <% if (posts && posts.length > 0) { %>
     <div class="post-grid">
@@ -155,7 +158,7 @@
         <% }) %>
     </div>
 <% } else { %>
-    <p>You haven't posted anything yet.</p>
+    <p><%= isCurrentUser ? 'You haven\'t' : (profileUser.nickname || profileUser.email) + ' hasn\'t' %> posted anything yet.</p>
 <% } %>
 
 <a href="/home" class="back-link">Back to Home</a>

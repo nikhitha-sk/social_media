@@ -17,7 +17,7 @@
             align-items: center;
             color: #333;
         }
-        h1, h2 {
+        h1, h2, h3 {
             color: #222;
             margin-bottom: 15px;
         }
@@ -30,6 +30,8 @@
             padding: 15px 25px;
             border-radius: 15px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
         }
         .profile-pic-small {
             width: 50px;
@@ -206,6 +208,51 @@
         .logout-link:hover {
             text-decoration: underline;
         }
+        /* New styles for user list */
+        .all-users-section {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-top: 30px;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+        .user-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Responsive grid for users */
+            gap: 15px;
+            justify-content: center;
+        }
+        .user-list-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #333;
+            padding: 10px;
+            border-radius: 10px;
+            transition: background-color 0.2s ease;
+        }
+        .user-list-item:hover {
+            background-color: #f0f2f5;
+        }
+        .user-list-item img {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 8px;
+            border: 2px solid #eee;
+        }
+        .user-list-item strong {
+            font-size: 0.9em;
+            text-align: center;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
@@ -288,6 +335,26 @@
 <% }) %>
 
 <a href="/posts/create" class="plus-icon">+</a>
+
+<div class="all-users-section">
+    <h2>Discover Users</h2>
+    <% if (allUsers && allUsers.length > 0) { %>
+        <div class="user-list">
+            <% allUsers.forEach(otherUser => { %>
+                <% if (otherUser._id.toString() !== user._id.toString()) { %> <!-- Don't show current user in "discover" -->
+                    <a href="/profile/<%= otherUser._id %>" class="user-list-item">
+                        <img src="<%= otherUser.profilePic.startsWith('/') ? otherUser.profilePic : '/uploads/profile_pics/' + otherUser.profilePic %>" 
+                             alt="<%= otherUser.nickname || otherUser.email %>'s Profile" onerror="this.src='/default_profile.jpg'">
+                        <strong><%= otherUser.nickname || otherUser.email %></strong>
+                    </a>
+                <% } %>
+            <% }) %>
+        </div>
+    <% } else { %>
+        <p>No other users to display.</p>
+    <% } %>
+</div>
+
 
 <a href="/logout" class="logout-link">Logout</a>
 
