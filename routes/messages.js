@@ -13,12 +13,11 @@ function isAuthenticated(req, res, next) {
     res.redirect('/login');
 }
 
-// GET list of all conversations for the logged-in user
-router.get('/conversations', isAuthenticated, async (req, res) => {
+// GET the main inbox page (list of conversations)
+router.get('/', isAuthenticated, async (req, res) => {
     try {
         const userId = req.user._id;
 
-        // Find all unique users involved in messages with the current user
         const conversations = await Message.aggregate([
             {
                 $match: {
@@ -66,10 +65,13 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
             }
         ]);
         
-        res.json(conversations);
+        // Render the inbox EJS template, passing conversations and current user
+        res.render('inbox', { user: req.user, conversations });
+
     } catch (err) {
-        console.error("Error fetching conversations:", err);
-        res.status(500).json({ message: "Error fetching conversations." });
+        console.error("Error fetching conversations for inbox:", err);
+        req.flash('error', 'Something went wrong loading your inbox.');
+        res.status(500).redirect('/home');
     }
 });
 
@@ -81,15 +83,16 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
         const otherUserId = req.params.otherUserId;
 
         if (!mongoose.Types.ObjectId.isValid(otherUserId)) {
-            return res.status(400).json({ message: "Invalid user ID." });
+            req.flash('error', 'Invalid user ID for chat.');
+            return res.status(400).redirect('/messages'); // Redirect to inbox on invalid ID
         }
 
-        // Check if both users follow each other if either account is private
         const currentUser = await User.findById(currentUserId);
         const otherUser = await User.findById(otherUserId);
 
         if (!currentUser || !otherUser) {
-            return res.status(404).json({ message: "One or both users not found." });
+            req.flash('error', 'One or both users not found.');
+            return res.status(404).redirect('/messages'); // Redirect to inbox if user not found
         }
 
         const senderFollowsRecipient = currentUser.following.some(id => id.equals(otherUserId));
@@ -97,7 +100,8 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
 
         if (currentUser.isPrivate || otherUser.isPrivate) {
             if (!senderFollowsRecipient || !recipientFollowsSender) {
-                return res.status(403).json({ message: "You must both follow each other to view this chat." });
+                req.flash('error', 'You must both follow each other to chat.');
+                return res.status(403).redirect('/messages'); // Redirect to inbox if privacy rules violated
             }
         }
 
@@ -107,9 +111,9 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
                 { sender: otherUserId, recipient: currentUserId }
             ]
         })
-        .sort({ createdAt: 1 }) // Sort by oldest first
-        .populate('sender', 'nickname profilePic email') // Populate sender details
-        .populate('recipient', 'nickname profilePic email'); // Populate recipient details (optional, but good for full message object)
+        .sort({ createdAt: 1 })
+        .populate('sender', 'nickname profilePic email')
+        .populate('recipient', 'nickname profilePic email');
 
         // Mark messages from other user as read
         const updateResult = await Message.updateMany(
@@ -128,14 +132,17 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
             }
         }
 
-        res.json(messages);
+        // Render the chat EJS template, passing messages and user info
+        res.render('chat', { user: req.user, otherUser: otherUser, messages: messages });
+
     } catch (err) {
-        console.error("Error fetching messages:", err);
-        res.status(500).json({ message: "Error fetching messages." });
+        console.error("Error fetching messages for chat:", err);
+        req.flash('error', 'Something went wrong loading the chat.');
+        res.status(500).redirect('/messages'); // Redirect to inbox on error
     }
 });
 
-// GET total unread DM count for the logged-in user
+// GET total unread DM count for the logged-in user (This route is now redundant for EJS rendering, but kept for API calls)
 router.get('/total-unread', isAuthenticated, async (req, res) => {
     try {
         const user = await User.findById(req.user._id);

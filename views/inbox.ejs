@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Inbox</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+            min-height: 100vh;
+        }
+        .message-container {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .inbox-header {
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .inbox-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            flex-grow: 1;
+            text-align: center;
+        }
+        .conversation-list {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            padding: 10px 0;
+            flex-grow: 1;
+        }
+        .conversation-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            text-decoration: none;
+            color: #333;
+            transition: background-color 0.2s ease;
+        }
+        .conversation-item:last-child {
+            border-bottom: none;
+        }
+        .conversation-item:hover {
+            background-color: #f0f2f5;
+        }
+        .conversation-item img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+            border: 2px solid #ddd;
+        }
+        .conversation-info {
+            flex-grow: 1;
+        }
+        .conversation-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1em;
+            color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .conversation-info .last-message {
+            font-size: 0.9em;
+            color: #555;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80%; /* Prevent message from pushing time too far */
+        }
+        .conversation-info .message-time {
+            font-size: 0.8em;
+            color: #888;
+        }
+        .unread-badge {
+            background-color: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            padding: 4px 8px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .no-conversations {
+            padding: 20px;
+            text-align: center;
+            color: #777;
+        }
+        .back-link {
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="message-container">
+    <% if (success_msg && success_msg.length > 0) { %>
+        <div class="alert alert-success">
+            <%= success_msg %>
+        </div>
+    <% } %>
+    <% if (error_msg && error_msg.length > 0) { %>
+        <div class="alert alert-danger">
+            <%= error_msg %>
+        </div>
+    <% } %>
+</div>
+
+<div class="inbox-header">
+    <a href="/home"><i class="fas fa-arrow-left" style="font-size: 1.5em; color: #555;"></i></a>
+    <h1>Your Inbox</h1>
+</div>
+
+<div class="conversation-list">
+    <% if (conversations && conversations.length > 0) { %>
+        <% conversations.forEach(conv => { %>
+            <a href="/messages/<%= conv.otherUser._id %>" class="conversation-item">
+                <img src="<%= conv.otherUser.profilePic.startsWith('/') ? conv.otherUser.profilePic : '/uploads/profile_pics/' + conv.otherUser.profilePic %>" 
+                     alt="<%= conv.otherUser.nickname || conv.otherUser.email %>'s Profile" onerror="this.src='/default_profile.jpg'">
+                <div class="conversation-info">
+                    <h3>
+                        <span><%= conv.otherUser.nickname || conv.otherUser.email %></span>
+                        <span class="message-time"><%= new Date(conv.lastMessage.createdAt).toLocaleString() %></span>
+                    </h3>
+                    <p class="last-message">
+                        <%= conv.lastMessage.content %>
+                        <% if (conv.unreadCount > 0) { %>
+                            <span class="unread-badge"><%= conv.unreadCount %></span>
+                        <% } %>
+                    </p>
+                </div>
+            </a>
+        <% }) %>
+    <% } else { %>
+        <p class="no-conversations">You have no conversations yet. Start chatting from a user's profile!</p>
+    <% } %>
+</div>
+
+<a href="/home" class="back-link">Back to Home</a>
+
+</body>
+</html>
