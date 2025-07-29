@@ -73,8 +73,8 @@
             max-width: 600px;
             display: flex;
             flex-direction: column;
-            flex-grow: 1; /* Allows chat box to expand */
-            min-height: 400px; /* Minimum height for chat area */
+            flex-grow: 1;
+            min-height: 400px;
         }
         .messages-area {
             flex-grow: 1;
@@ -106,12 +106,12 @@
         .message.sent .message-bubble {
             background-color: #007bff;
             color: white;
-            border-bottom-right-radius: 5px; /* Pointy end */
+            border-bottom-right-radius: 5px;
         }
         .message.received .message-bubble {
             background-color: #e0e0e0;
             color: #333;
-            border-bottom-left-radius: 5px; /* Pointy end */
+            border-bottom-left-radius: 5px;
         }
         .message-time {
             font-size: 0.75em;
@@ -175,7 +175,7 @@
 </div>
 
 <div class="chat-header">
-    <a href="/home"><i class="fas fa-arrow-left" style="font-size: 1.5em; color: #555;"></i></a>
+    <a href="/messages"><i class="fas fa-arrow-left" style="font-size: 1.5em; color: #555;"></i></a> <!-- Link back to inbox -->
     <img src="<%= otherUser.profilePic.startsWith('/') ? otherUser.profilePic : '/uploads/profile_pics/' + otherUser.profilePic %>" 
          alt="<%= otherUser.nickname || otherUser.email %>'s Profile" onerror="this.src='/default_profile.jpg'">
     <h2><%= otherUser.nickname || otherUser.email %></h2>
@@ -183,8 +183,19 @@
 
 <div class="chat-box">
     <div class="messages-area" id="messagesArea">
-        <!-- Chat messages will be loaded here -->
-        <p style="text-align: center; color: #777;">Loading chat history...</p>
+        <!-- Chat messages will be displayed here directly from EJS -->
+        <% if (messages && messages.length > 0) { %>
+            <% messages.forEach(message => { %>
+                <div class="message <%= message.sender._id.toString() === user._id.toString() ? 'sent' : 'received' %>">
+                    <div class="message-bubble">
+                        <%= message.content %>
+                        <div class="message-time"><%= new Date(message.createdAt).toLocaleString() %></div>
+                    </div>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <p style="text-align: center; color: #777;">Start a new conversation!</p>
+        <% } %>
     </div>
     <form class="message-input-form" id="messageForm">
         <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
@@ -192,31 +203,30 @@
     </form>
 </div>
 
-<a href="/home" class="back-link">Back to Home</a>
+<a href="/messages" class="back-link">Back to Inbox</a> <!-- Link back to inbox -->
 
 <script>
     // Get user IDs from EJS variables
     const currentUserId = "<%= user._id %>";
     const otherUserId = "<%= otherUser._id %>";
+    // Profile pics for displaying messages dynamically (Socket.IO)
     const otherUserProfilePic = "<%= otherUser.profilePic.startsWith('/') ? otherUser.profilePic : '/uploads/profile_pics/' + otherUser.profilePic %>";
     const currentUserProfilePic = "<%= user.profilePic.startsWith('/') ? user.profilePic : '/uploads/profile_pics/' + user.profilePic %>";
-
 
     const messagesArea = document.getElementById('messagesArea');
     const messageForm = document.getElementById('messageForm');
     const messageInput = document.getElementById('messageInput');
 
     // Initialize Socket.IO connection
-    // IMPORTANT: Use the full URL to your server, not just '/' if running on different ports
     const socket = io('<%= process.env.CLIENT_URL || "http://localhost:3000" %>', {
-        withCredentials: true // Essential for session/passport to work
+        withCredentials: true
     });
 
     socket.on('connect', () => {
         console.log('Connected to Socket.IO server');
         // Join the specific chat room when connected
         socket.emit('join_chat', otherUserId);
-        fetchChatHistory(); // Fetch history once connected and joined
+        // No need to call fetchChatHistory() here anymore, as history is rendered by EJS
     });
 
     socket.on('disconnect', () => {
@@ -224,12 +234,13 @@
     });
 
     socket.on('receive_message', (message) => {
+        // Add new real-time message to chat
         addMessageToChat(message);
         scrollToBottom();
     });
 
     socket.on('dm_error', (errorMessage) => {
-        alert(errorMessage); // Simple alert for DM errors
+        alert(errorMessage);
         console.error('DM Error:', errorMessage);
     });
 
@@ -238,38 +249,14 @@
         const content = messageInput.value.trim();
         if (content) {
             socket.emit('send_message', { recipientId: otherUserId, content: content });
-            messageInput.value = ''; // Clear input
+            messageInput.value = '';
         }
     });
-
-    async function fetchChatHistory() {
-        try {
-            const response = await fetch(`/messages/${otherUserId}`);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-            const messages = await response.json();
-            messagesArea.innerHTML = ''; // Clear loading message
-
-            if (messages.length === 0) {
-                messagesArea.innerHTML = '<p style="text-align: center; color: #777;">Start a new conversation!</p>';
-            } else {
-                messages.forEach(addMessageToChat);
-                scrollToBottom();
-            }
-        } catch (error) {
-            console.error('Error fetching chat history:', error);
-            messagesArea.innerHTML = `<p style="text-align: center; color: red;">${error.message || 'Failed to load chat history.'}</p>`;
-        }
-    }
 
     function addMessageToChat(message) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         messageElement.classList.add(message.sender._id.toString() === currentUserId ? 'sent' : 'received');
-
-        const profilePic = message.sender._id.toString() === currentUserId ? currentUserProfilePic : otherUserProfilePic;
 
         messageElement.innerHTML = `
             <div class="message-bubble">
@@ -284,7 +271,7 @@
         messagesArea.scrollTop = messagesArea.scrollHeight;
     }
 
-    // Initial scroll to bottom on page load
+    // Initial scroll to bottom after EJS renders the history
     window.onload = scrollToBottom;
 </script>
 

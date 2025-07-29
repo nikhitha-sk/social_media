@@ -65,7 +65,6 @@ router.get('/', isAuthenticated, async (req, res) => {
             }
         ]);
         
-        // Render the inbox EJS template, passing conversations and current user
         res.render('inbox', { user: req.user, conversations });
 
     } catch (err) {
@@ -84,7 +83,7 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
 
         if (!mongoose.Types.ObjectId.isValid(otherUserId)) {
             req.flash('error', 'Invalid user ID for chat.');
-            return res.status(400).redirect('/messages'); // Redirect to inbox on invalid ID
+            return res.status(400).redirect('/messages');
         }
 
         const currentUser = await User.findById(currentUserId);
@@ -92,7 +91,7 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
 
         if (!currentUser || !otherUser) {
             req.flash('error', 'One or both users not found.');
-            return res.status(404).redirect('/messages'); // Redirect to inbox if user not found
+            return res.status(404).redirect('/messages');
         }
 
         const senderFollowsRecipient = currentUser.following.some(id => id.equals(otherUserId));
@@ -101,7 +100,7 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
         if (currentUser.isPrivate || otherUser.isPrivate) {
             if (!senderFollowsRecipient || !recipientFollowsSender) {
                 req.flash('error', 'You must both follow each other to chat.');
-                return res.status(403).redirect('/messages'); // Redirect to inbox if privacy rules violated
+                return res.status(403).redirect('/messages');
             }
         }
 
@@ -127,8 +126,6 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
             if (recipientUserDoc) {
                 recipientUserDoc.dm_unread_count = Math.max(0, recipientUserDoc.dm_unread_count - updateResult.modifiedCount);
                 await recipientUserDoc.save();
-                // No need to emit dm_unread_count_updated here, as the client will already be in the chat
-                // and the count will update when they navigate back to homepage.
             }
         }
 
@@ -138,7 +135,7 @@ router.get('/:otherUserId', isAuthenticated, async (req, res) => {
     } catch (err) {
         console.error("Error fetching messages for chat:", err);
         req.flash('error', 'Something went wrong loading the chat.');
-        res.status(500).redirect('/messages'); // Redirect to inbox on error
+        res.status(500).redirect('/messages');
     }
 });
 
