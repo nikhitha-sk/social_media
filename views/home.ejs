@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - Social Media</title>
-    <!-- Include Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
@@ -403,7 +402,6 @@
         <div class="notifications-dropdown" id="notificationsDropdown">
             <h3>Notifications</h3>
             <div id="notificationList">
-                <!-- Notifications will be loaded here by JavaScript -->
                 <p class="no-notifications">Loading notifications...</p>
             </div>
         </div>
@@ -527,8 +525,15 @@
             let unreadIds = [];
             notifications.forEach(notif => {
                 const item = document.createElement('a');
-                // FIXED: Link to the sender's profile, not post.userId
-                item.href = `/profile/${notif.senderId._id}`; 
+                // Determine link based on notification type
+                if (notif.type === 'followRequest' && notif.followRequestId) {
+                    // Link to current user's own profile to manage requests
+                    item.href = `/profile`; 
+                } else {
+                    // Default for likes/comments: link to sender's profile
+                    item.href = `/profile/${notif.senderId._id}`; 
+                }
+                
                 item.classList.add('notification-item');
                 if (!notif.read) {
                     item.classList.add('unread');
@@ -549,6 +554,15 @@
                     notificationMessage = `<strong>${senderName}</strong> liked your post.`;
                 } else if (notif.type === 'comment') {
                     notificationMessage = `<strong>${senderName}</strong> commented: "${notif.commentText}"`;
+                } else if (notif.type === 'followRequest') { // <--- NEW: Handle followRequest type
+                    if (notif.followRequestId) {
+                        // This is a pending request for the recipient
+                        notificationMessage = `<strong>${senderName}</strong> wants to follow you.`;
+                    } else {
+                        // This is an acceptance notification (recipient is sender, sender is receiver)
+                        // It means the recipient of this notif (original sender of request) had their request accepted
+                        notificationMessage = `<strong>${senderName}</strong> accepted your follow request!`;
+                    }
                 }
 
                 item.innerHTML = `
@@ -587,8 +601,10 @@
             }
             // After marking as read, update the badge count visually
             if (notificationBadge) {
-                notificationBadge.textContent = 0; // Set to 0 directly
-                notificationBadge.style.display = 'none'; // Hide badge if 0
+                // If all marked read, set to 0. Otherwise, fetch new count or decrement.
+                // For simplicity, we'll set to 0 and hide. A full refresh would fetch exact count.
+                notificationBadge.textContent = 0; 
+                notificationBadge.style.display = 'none'; 
             }
         } catch (error) {
             console.error('Error marking notifications as read:', error);

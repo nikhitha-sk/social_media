@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
 const User = require('../models/User'); // Needed for populating sender details
+const FollowRequest = require('../models/FollowRequest'); // <--- NEW: Import FollowRequest model
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req, res, next) {
@@ -13,13 +14,13 @@ function isAuthenticated(req, res, next) {
 }
 
 // GET route to fetch all notifications for the logged-in user
-// This route is primarily for AJAX calls or a dedicated notifications page
 router.get('/', isAuthenticated, async (req, res) => {
     try {
         const notifications = await Notification.find({ recipientId: req.user._id })
                                                 .sort({ createdAt: -1 })
-                                                .populate('senderId', 'nickname profilePic email') // Populate sender details
-                                                .populate('postId', 'image caption'); // Populate post details
+                                                .populate('senderId', 'nickname profilePic email')
+                                                .populate('postId', 'image caption') // For likes/comments
+                                                .populate('followRequestId'); // <--- NEW: Populate followRequestId for requests
 
         res.json(notifications); // Send notifications as JSON
     } catch (err) {

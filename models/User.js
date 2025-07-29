@@ -1,19 +1,43 @@
 const mongoose = require('mongoose');
+const passportLocalMongoose = require('passport-local-mongoose');
 
 const userSchema = new mongoose.Schema({
-    email: String,
-    password: String, // only for local strategy
-    googleId: String,
-    nickname: String,
-    profilePic: { type: String, default: '/default_profile.jpg'},
-    followers: [{ // Array of User IDs who follow this user
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true
+    },
+    nickname: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    profilePic: {
+        type: String,
+        default: '/default_profile.jpg' // Default profile picture
+    },
+    followers: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
-    following: [{ // Array of User IDs this user is following
+    following: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }]
+    }],
+    isPrivate: { // <--- NEW: Field to determine if profile is private
+        type: Boolean,
+        default: false
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+userSchema.plugin(passportLocalMongoose, {
+    usernameField: 'email'
 });
 
 module.exports = mongoose.model('User', userSchema);

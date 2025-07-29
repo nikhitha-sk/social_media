@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= profileUser.nickname || profileUser.email %>'s Profile</title>
-    <!-- Include Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
@@ -114,12 +113,83 @@
         .profile-form button:hover, .follow-button:hover {
             background-color: #0056b3;
         }
-        .follow-button.unfollow {
+        .follow-button.unfollow, .follow-button.request-sent {
             background-color: #6c757d;
         }
-        .follow-button.unfollow:hover {
+        .follow-button.unfollow:hover, .follow-button.request-sent:hover {
             background-color: #5a6268;
         }
+        /* NEW: Styles for Follow Request Section */
+        .follow-requests-section {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 600px;
+            text-align: left; /* Align text left for readability */
+        }
+        .follow-requests-section h3 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #222;
+        }
+        .request-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .request-item:last-child {
+            border-bottom: none;
+        }
+        .request-sender-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .request-sender-info img {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #ddd;
+        }
+        .request-sender-info span {
+            font-weight: bold;
+            color: #333;
+        }
+        .request-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .request-actions button {
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            border: none;
+            transition: background-color 0.2s ease;
+        }
+        .request-actions .accept-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .request-actions .accept-btn:hover {
+            background-color: #218838;
+        }
+        .request-actions .decline-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .request-actions .decline-btn:hover {
+            background-color: #c82333;
+        }
+
+        /* Post Grid Styles (already existing) */
         .post-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -180,6 +250,7 @@
     <div class="profile-info">
         <h2><%= profileUser.nickname || profileUser.email %></h2>
         <p><%= profileUser.email %></p>
+        <p>Profile: <strong><%= profileUser.isPrivate ? 'Private' : 'Public' %></strong></p>
     </div>
 
     <div class="profile-stats">
@@ -194,18 +265,25 @@
     </div>
 
     <% if (!isCurrentUser) { %>
-        <% 
-            // Ensure user and user.following are defined before checking
-            const isFollowing = user && user.following && user.following.some(id => id.toString() === profileUser._id.toString());
-        %>
         <form action="/user/follow/<%= profileUser._id %>" method="POST">
-            <button type="submit" class="follow-button <%= isFollowing ? 'unfollow' : '' %>">
-                <%= isFollowing ? 'Unfollow' : 'Follow' %>
+            <% 
+                // Determine button state:
+                let buttonText = 'Follow';
+                let buttonClass = '';
+
+                if (isFollowing) {
+                    buttonText = 'Unfollow';
+                    buttonClass = 'unfollow';
+                } else if (profileUser.isPrivate && followRequestPending) {
+                    buttonText = 'Request Sent';
+                    buttonClass = 'request-sent';
+                }
+            %>
+            <button type="submit" class="follow-button <%= buttonClass %>">
+                <%= buttonText %>
             </button>
         </form>
-    <% } %>
-
-    <% if (isCurrentUser) { %>
+    <% } else { %>
         <h3>Update Profile</h3>
         <div class="profile-form">
             <h4>Change Nickname</h4>
@@ -219,11 +297,55 @@
                 <input type="file" name="profilePic" accept="image/*" required>
                 <button type="submit">Update Profile Picture</button>
             </form>
+
+            <h4>Privacy Setting</h4>
+            <form action="/profile/toggle-privacy" method="POST">
+                <button type="submit">Toggle to <%= profileUser.isPrivate ? 'Public' : 'Private' %></button>
+            </form>
         </div>
     <% } %>
 </div>
 
-<h2><%= isCurrentUser ? 'Your' : (profileUser.nickname || profileUser.email) + "'s" %> Posts</h2>
+<% if (isCurrentUser && pendingFollowRequests && pendingFollowRequests.length > 0) { %>
+    <div class="follow-requests-section">
+        <h3>Pending Follow Requests</h3>
+        <% pendingFollowRequests.forEach(request => { %>
+            <div class="request-item">
+                <div class="request-sender-info">
+                    <img src="<%= request.senderId.profilePic.startsWith('/') ? request.senderId.profilePic : '/uploads/profile_pics/' + request.senderId.profilePic %>" 
+                         alt="<%= request.senderId.nickname || request.senderId.email %>'s Profile" onerror="this.src='/default_profile.jpg'">
+                    <span><%= request.senderId.nickname || request.senderId.email %> wants to follow you.</span>
+                </div>
+                <div class="request-actions">
+                    <form action="/user/follow-request/accept/<%= request._id %>" method="POST" style="display:inline;">
+                        <button type="submit" class="accept-btn">Accept</button>
+                    </form>
+                    <form action="/user/follow-request/decline/<%= request._id %>" method="POST" style="display:inline;">
+                        <button type="submit" class="decline-btn">Decline</button>
+                    </form>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+<% } else if (isCurrentUser && (!pendingFollowRequests || pendingFollowRequests.length === 0)) { %>
+    <div class="follow-requests-section">
+        <h3>Pending Follow Requests</h3>
+        <p style="text-align: center; color: #777;">No pending follow requests.</p>
+    </div>
+<% } %>
+
+
+<h2>
+    <% if (isCurrentUser) { %>
+        Your Posts
+    <% } else { %>
+        <% if (profileUser.isPrivate && !isFollowing) { %>
+            This User's Posts (Private Profile)
+        <% } else { %>
+            <%= profileUser.nickname || profileUser.email %>'s Posts
+        <% } %>
+    <% } %>
+</h2>
 
 <% if (posts && posts.length > 0) { %>
     <div class="post-grid">
@@ -236,8 +358,10 @@
             </div>
         <% }) %>
     </div>
+<% } else if (!isCurrentUser && profileUser.isPrivate && !isFollowing) { %>
+    <p style="text-align: center; color: #777;">Follow this user to see their posts.</p>
 <% } else { %>
-    <p><%= isCurrentUser ? 'You haven\'t' : (profileUser.nickname || profileUser.email) + ' hasn\'t' %> posted anything yet.</p>
+    <p style="text-align: center; color: #777;"><%= isCurrentUser ? 'You haven\'t' : (profileUser.nickname || profileUser.email) + ' hasn\'t' %> posted anything yet.</p>
 <% } %>
 
 <a href="/home" class="back-link">Back to Home</a>
