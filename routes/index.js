@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
 const User = require('../models/User');
-const Notification = require('../models/Notification'); // <--- NEW: Import Notification model
+const Notification = require('../models/Notification');
 
 // Middleware to check if user is authenticated (assuming this is defined elsewhere)
 function isAuthenticated(req, res, next) {
@@ -13,7 +13,7 @@ function isAuthenticated(req, res, next) {
     res.redirect('/login');
 }
 
-// GET Home Page - show personalized feed and all users
+// GET Home Page - show personalized feed, all users, and unread counts
 router.get('/home', isAuthenticated, async (req, res) => {
     try {
         const user = req.user; // Logged-in user
@@ -31,13 +31,15 @@ router.get('/home', isAuthenticated, async (req, res) => {
 
         const allUsers = await User.find({});
 
-        // NEW: Fetch unread notifications count for the current user
         const unreadNotificationsCount = await Notification.countDocuments({
             recipientId: user._id,
             read: false
         });
 
-        res.render('home', { user, posts, allUsers, unreadNotificationsCount }); // Pass count to template
+        // NEW: Get DM unread count from the user object
+        const dmUnreadCount = user.dm_unread_count || 0;
+
+        res.render('home', { user, posts, allUsers, unreadNotificationsCount, dmUnreadCount }); // Pass dmUnreadCount
     } catch (err) {
         console.error(err);
         req.flash('error', 'Something went wrong loading the homepage.');

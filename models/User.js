@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
     },
     profilePic: {
         type: String,
-        default: '/default_profile.jpg' // Default profile picture
+        default: '/default_profile.jpg'
     },
     followers: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -26,9 +26,13 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
-    isPrivate: { // <--- NEW: Field to determine if profile is private
+    isPrivate: {
         type: Boolean,
         default: false
+    },
+    dm_unread_count: { // <---Total count of unread DMs
+        type: Number,
+        default: 0
     },
     createdAt: {
         type: Date,
