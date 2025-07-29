@@ -527,7 +527,8 @@
             let unreadIds = [];
             notifications.forEach(notif => {
                 const item = document.createElement('a');
-                item.href = `/profile/${notif.postId.userId}`; // Link to the post owner's profile (or could be post detail page)
+                // FIXED: Link to the sender's profile, not post.userId
+                item.href = `/profile/${notif.senderId._id}`; 
                 item.classList.add('notification-item');
                 if (!notif.read) {
                     item.classList.add('unread');
@@ -536,9 +537,13 @@
 
                 let notificationMessage = '';
                 let senderName = notif.senderId ? (notif.senderId.nickname || notif.senderId.email) : 'Someone';
-                let postImageSrc = notif.postId && notif.postId.image 
-                    ? `/uploads/${notif.postId.image}` 
-                    : '/default_profile.jpg'; // Fallback for post image
+                
+                // Construct the image source for the sender's profile picture
+                let senderProfilePicSrc = notif.senderId && notif.senderId.profilePic 
+                    ? (notif.senderId.profilePic.startsWith('/') 
+                        ? notif.senderId.profilePic 
+                        : '/uploads/profile_pics/' + notif.senderId.profilePic)
+                    : '/default_profile.jpg'; // Fallback
 
                 if (notif.type === 'like') {
                     notificationMessage = `<strong>${senderName}</strong> liked your post.`;
@@ -547,7 +552,7 @@
                 }
 
                 item.innerHTML = `
-                    <img src="${notif.senderId.profilePic.startsWith('/') ? notif.senderId.profilePic : '/uploads/profile_pics/' + notif.senderId.profilePic}" 
+                    <img src="${senderProfilePicSrc}" 
                          alt="Sender Profile" onerror="this.src='/default_profile.jpg'">
                     <div class="notification-content">
                         ${notificationMessage}
@@ -585,8 +590,6 @@
                 notificationBadge.textContent = 0; // Set to 0 directly
                 notificationBadge.style.display = 'none'; // Hide badge if 0
             }
-            // Optionally, re-fetch notifications to update UI, or just rely on badge update
-            // fetchNotifications(); 
         } catch (error) {
             console.error('Error marking notifications as read:', error);
         }
@@ -601,7 +604,7 @@
 
     // Close dropdown if clicked outside
     window.onclick = function(event) {
-        if (!event.target.matches('.notification-icon-container') && !event.target.matches('.notification-icon')) {
+        if (!event.target.matches('.notification-icon-container') && !event.target.closest('.notification-icon-container')) {
             if (notificationsDropdown.classList.contains('show')) {
                 notificationsDropdown.classList.remove('show');
             }
