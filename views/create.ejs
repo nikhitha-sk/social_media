@@ -1,6 +1,104 @@
-<h2>Create Post</h2>
-<form action="/posts/create" method="POST" enctype="multipart/form-data">
-  <input type="file" name="image" required><br>
-  <textarea name="caption" placeholder="Write a caption..." required></textarea><br>
-  <button type="submit">Post</button>
-</form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Post</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; /* Consistent font */
+            background-color: #f0f2f5; /* Light grey background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Full viewport height */
+            margin: 0;
+            color: #333;
+        }
+        .create-post-container {
+            background-color: #fff; /* White background for the form container */
+            padding: 40px;
+            border-radius: 15px; /* Rounded corners */
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1); /* Soft shadow */
+            text-align: center;
+            width: 100%;
+            max-width: 500px; /* Max width for the form */
+            box-sizing: border-box; /* Include padding in width */
+        }
+        h2 {
+            color: #222;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Space between form elements */
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px; /* Rounded input fields */
+            font-size: 1em;
+            box-sizing: border-box;
+            background-color: #f9f9f9; /* Slightly different background for file input */
+            cursor: pointer;
+        }
+        input[type="file"]::-webkit-file-upload-button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background-color 0.2s ease;
+        }
+        input[type="file"]::-webkit-file-upload-button:hover {
+            background-color: #0056b3;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px; /* Rounded textarea */
+            font-size: 1em;
+            min-height: 120px; /* Minimum height for caption */
+            resize: vertical; /* Allow vertical resizing */
+            box-sizing: border-box;
+        }
+        textarea:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+        button[type="submit"] {
+            background-color: #28a745; /* Green for post button */
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px; /* Rounded button */
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        button[type="submit"]:hover {
+            background-color: #218838; /* Darker green on hover */
+            transform: translateY(-1px); /* Slight lift effect */
+        }
+    </style>
+</head>
+<body>
+
+<div class="create-post-container">
+    <h2>Create Post</h2>
+    <form action="/posts/create" method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" required>
+        <textarea name="caption" placeholder="Write a caption..." required></textarea>
+        <button type="submit">Post</button>
+    </form>
+</div>
+
+</body>
+</html>
