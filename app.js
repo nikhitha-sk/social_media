@@ -4,7 +4,7 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 const path = require('path');
-const flash = require('connect-flash'); // <--- NEW: Import connect-flash
+const flash = require('connect-flash');
 require('dotenv').config();
 require('./passportConfig');
 
@@ -17,7 +17,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.json()); // Ensure this is present for JSON body parsing
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
@@ -34,7 +34,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Flash messages middleware (MUST come after session middleware)
-app.use(flash()); // <--- NEW: Use connect-flash
+app.use(flash());
 
 // Make flash messages available in all templates
 app.use((req, res, next) => {
@@ -48,11 +48,13 @@ const authRoutes = require('./routes/auth');
 const indexRoutes = require('./routes/index');
 const userRoutes = require('./routes/user');
 const postRoutes = require('./routes/post');
+const notificationsRoutes = require('./routes/notifications'); // <--- NEW: Import notifications routes
 
 app.use('/', authRoutes);
 app.use('/', indexRoutes);
 app.use('/', userRoutes);
 app.use('/posts', postRoutes);
+app.use('/notifications', notificationsRoutes); // <--- NEW: Use notifications routes
 
 // Start server
 const PORT = process.env.PORT || 3000;

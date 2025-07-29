@@ -2,13 +2,15 @@ const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
 const User = require('../models/User');
+const Notification = require('../models/Notification'); // <--- NEW: Import Notification model
 
 // Middleware to check if user is authenticated (assuming this is defined elsewhere)
 function isAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
         return next();
     }
-    res.redirect('/login'); // Redirect to login if not authenticated
+    req.flash('error', 'Please log in to view this page.');
+    res.redirect('/login');
 }
 
 // GET Home Page - show personalized feed and all users
@@ -16,25 +18,29 @@ router.get('/home', isAuthenticated, async (req, res) => {
     try {
         const user = req.user; // Logged-in user
 
-        // Get IDs of users the current user is following, plus the current user's own ID
         const followedUserIds = user.following.map(id => id);
         followedUserIds.push(user._id); // Include current user's own posts in the feed
 
-        // Fetch posts only from followed users (and current user)
         const posts = await Post.find({ userId: { $in: followedUserIds } })
             .sort({ createdAt: -1 })
-            .populate('userId') // Populates the post creator
-            .populate({ // Populates the user for each comment
+            .populate('userId')
+            .populate({
                 path: 'comments.userId',
                 model: 'User'
             }); 
 
-        // Fetch all users for the "suggested users" list
         const allUsers = await User.find({});
 
-        res.render('home', { user, posts, allUsers });
+        // NEW: Fetch unread notifications count for the current user
+        const unreadNotificationsCount = await Notification.countDocuments({
+            recipientId: user._id,
+            read: false
+        });
+
+        res.render('home', { user, posts, allUsers, unreadNotificationsCount }); // Pass count to template
     } catch (err) {
         console.error(err);
+        req.flash('error', 'Something went wrong loading the homepage.');
         res.status(500).send("Something went wrong.");
     }
 });

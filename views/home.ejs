@@ -21,17 +21,45 @@
             color: #222;
             margin-bottom: 15px;
         }
-        .profile-header {
+        .message-container {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .top-bar {
+            width: 100%;
+            max-width: 600px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
             margin-bottom: 20px;
             background-color: #fff;
             padding: 15px 25px;
             border-radius: 15px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 600px;
+            position: relative; /* For notification dropdown positioning */
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .profile-pic-small {
             width: 50px;
@@ -39,6 +67,96 @@
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid #ddd;
+        }
+        .notification-icon-container {
+            position: relative;
+            cursor: pointer;
+            padding: 10px;
+        }
+        .notification-icon {
+            font-size: 1.8em;
+            color: #555;
+        }
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 7px;
+            font-size: 0.7em;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .notifications-dropdown {
+            display: none; /* Hidden by default */
+            position: absolute;
+            top: 100%; /* Position below the icon */
+            right: 0;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 1000;
+            min-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .notifications-dropdown.show {
+            display: block;
+        }
+        .notifications-dropdown h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            color: #333;
+            text-align: left;
+        }
+        .notification-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            text-decoration: none;
+            color: #333;
+            transition: background-color 0.2s ease;
+        }
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+        .notification-item:hover {
+            background-color: #f0f2f5;
+        }
+        .notification-item.unread {
+            background-color: #e6f7ff; /* Light blue for unread */
+        }
+        .notification-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        .notification-content {
+            flex-grow: 1;
+            font-size: 0.9em;
+        }
+        .notification-content strong {
+            color: #007bff;
+        }
+        .notification-content .time {
+            display: block;
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 3px;
+        }
+        .no-notifications {
+            padding: 10px;
+            color: #777;
+            text-align: center;
         }
         .post-card {
             background-color: #fff;
@@ -208,7 +326,6 @@
         .logout-link:hover {
             text-decoration: underline;
         }
-        /* New styles for user list */
         .all-users-section {
             background-color: #fff;
             border-radius: 15px;
@@ -223,7 +340,7 @@
             padding: 0;
             margin: 0;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Responsive grid for users */
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 15px;
             justify-content: center;
         }
@@ -257,11 +374,40 @@
 </head>
 <body>
 
-<div class="profile-header">
-    <a href="/profile">
-        <img src="<%= user.profilePic %>" alt="Profile" class="profile-pic-small">
-    </a>
-    <h1>Welcome, <%= user.nickname || user.email %>!</h1>
+<div class="message-container">
+    <% if (success_msg && success_msg.length > 0) { %>
+        <div class="alert alert-success">
+            <%= success_msg %>
+        </div>
+    <% } %>
+    <% if (error_msg && error_msg.length > 0) { %>
+        <div class="alert alert-danger">
+            <%= error_msg %>
+        </div>
+    <% } %>
+</div>
+
+<div class="top-bar">
+    <div class="profile-header">
+        <a href="/profile">
+            <img src="<%= user.profilePic %>" alt="Profile" class="profile-pic-small">
+        </a>
+        <h1>Welcome, <%= user.nickname || user.email %>!</h1>
+    </div>
+
+    <div class="notification-icon-container" onclick="toggleNotifications()">
+        <i class="fas fa-bell notification-icon"></i>
+        <% if (unreadNotificationsCount > 0) { %>
+            <span class="notification-badge"><%= unreadNotificationsCount %></span>
+        <% } %>
+        <div class="notifications-dropdown" id="notificationsDropdown">
+            <h3>Notifications</h3>
+            <div id="notificationList">
+                <!-- Notifications will be loaded here by JavaScript -->
+                <p class="no-notifications">Loading notifications...</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <h2>Latest Posts</h2>
@@ -341,7 +487,7 @@
     <% if (allUsers && allUsers.length > 0) { %>
         <div class="user-list">
             <% allUsers.forEach(otherUser => { %>
-                <% if (otherUser._id.toString() !== user._id.toString()) { %> <!-- Don't show current user in "discover" -->
+                <% if (otherUser._id.toString() !== user._id.toString()) { %>
                     <a href="/profile/<%= otherUser._id %>" class="user-list-item">
                         <img src="<%= otherUser.profilePic.startsWith('/') ? otherUser.profilePic : '/uploads/profile_pics/' + otherUser.profilePic %>" 
                              alt="<%= otherUser.nickname || otherUser.email %>'s Profile" onerror="this.src='/default_profile.jpg'">
@@ -357,6 +503,111 @@
 
 
 <a href="/logout" class="logout-link">Logout</a>
+
+<script>
+    const notificationsDropdown = document.getElementById('notificationsDropdown');
+    const notificationList = document.getElementById('notificationList');
+    const notificationBadge = document.querySelector('.notification-badge');
+
+    async function fetchNotifications() {
+        try {
+            const response = await fetch('/notifications');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const notifications = await response.json();
+            
+            notificationList.innerHTML = ''; // Clear loading message
+
+            if (notifications.length === 0) {
+                notificationList.innerHTML = '<p class="no-notifications">No notifications.</p>';
+                return;
+            }
+
+            let unreadIds = [];
+            notifications.forEach(notif => {
+                const item = document.createElement('a');
+                item.href = `/profile/${notif.postId.userId}`; // Link to the post owner's profile (or could be post detail page)
+                item.classList.add('notification-item');
+                if (!notif.read) {
+                    item.classList.add('unread');
+                    unreadIds.push(notif._id);
+                }
+
+                let notificationMessage = '';
+                let senderName = notif.senderId ? (notif.senderId.nickname || notif.senderId.email) : 'Someone';
+                let postImageSrc = notif.postId && notif.postId.image 
+                    ? `/uploads/${notif.postId.image}` 
+                    : '/default_profile.jpg'; // Fallback for post image
+
+                if (notif.type === 'like') {
+                    notificationMessage = `<strong>${senderName}</strong> liked your post.`;
+                } else if (notif.type === 'comment') {
+                    notificationMessage = `<strong>${senderName}</strong> commented: "${notif.commentText}"`;
+                }
+
+                item.innerHTML = `
+                    <img src="${notif.senderId.profilePic.startsWith('/') ? notif.senderId.profilePic : '/uploads/profile_pics/' + notif.senderId.profilePic}" 
+                         alt="Sender Profile" onerror="this.src='/default_profile.jpg'">
+                    <div class="notification-content">
+                        ${notificationMessage}
+                        <span class="time">${new Date(notif.createdAt).toLocaleString()}</span>
+                    </div>
+                `;
+                notificationList.appendChild(item);
+            });
+
+            // Mark fetched unread notifications as read after displaying them
+            if (unreadIds.length > 0) {
+                markNotificationsAsRead(unreadIds);
+            }
+
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+            notificationList.innerHTML = '<p class="no-notifications" style="color:red;">Failed to load notifications.</p>';
+        }
+    }
+
+    async function markNotificationsAsRead(idsToMark) {
+        try {
+            const response = await fetch('/notifications/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ notificationIds: idsToMark })
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // After marking as read, update the badge count visually
+            if (notificationBadge) {
+                notificationBadge.textContent = 0; // Set to 0 directly
+                notificationBadge.style.display = 'none'; // Hide badge if 0
+            }
+            // Optionally, re-fetch notifications to update UI, or just rely on badge update
+            // fetchNotifications(); 
+        } catch (error) {
+            console.error('Error marking notifications as read:', error);
+        }
+    }
+
+    function toggleNotifications() {
+        notificationsDropdown.classList.toggle('show');
+        if (notificationsDropdown.classList.contains('show')) {
+            fetchNotifications(); // Fetch and display when shown
+        }
+    }
+
+    // Close dropdown if clicked outside
+    window.onclick = function(event) {
+        if (!event.target.matches('.notification-icon-container') && !event.target.matches('.notification-icon')) {
+            if (notificationsDropdown.classList.contains('show')) {
+                notificationsDropdown.classList.remove('show');
+            }
+        }
+    }
+</script>
 
 </body>
 </html>

@@ -2,14 +2,16 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const Post = require('../models/Post');
+const Notification = require('../models/Notification'); // <--- NEW: Import Notification model
 const router = express.Router();
 const fs = require('fs');
 
-// Middleware to check if user is authenticated (assuming this is defined elsewhere)
+// Middleware to check if user is authenticated
 function isAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
         return next();
     }
+    req.flash('error', 'Please log in to view this page.');
     res.redirect('/login');
 }
 
@@ -35,6 +37,7 @@ router.get('/create', isAuthenticated, (req, res) => {
 router.post('/create', isAuthenticated, upload.single('image'), async (req, res) => {
     if (!req.file) {
         console.error("No image file uploaded for the post.");
+        req.flash('error', 'Please upload an image for your post.');
         return res.redirect('/create');
     }
 
@@ -45,10 +48,12 @@ router.post('/create', isAuthenticated, upload.single('image'), async (req, res)
             caption: req.body.caption
         });
         await post.save();
+        req.flash('success', 'Post created successfully!');
         res.redirect('/home');
     } catch (err) {
         console.error("Error creating post:", err);
-        res.status(500).send("Failed to create post.");
+        req.flash('error', 'Failed to create post.');
+        res.status(500).redirect('/create');
     }
 });
 
@@ -59,15 +64,18 @@ router.post('/delete/:id', isAuthenticated, async (req, res) => {
         const post = await Post.findById(postId);
 
         if (!post) {
-            return res.status(404).send("Post not found.");
+            req.flash('error', 'Post not found.');
+            return res.status(404).redirect('/home');
         }
 
         if (!post.userId.equals(req.user._id)) {
-            return res.status(403).send("You are not authorized to delete this post.");
+            req.flash('error', 'You are not authorized to delete this post.');
+            return res.status(403).redirect('/home');
         }
 
         await Post.findByIdAndDelete(postId);
 
+        // Optional: Delete the associated image file from the server
         const imagePath = path.join(__dirname, '../public/uploads', post.image);
         fs.unlink(imagePath, (err) => {
             if (err) {
@@ -75,14 +83,19 @@ router.post('/delete/:id', isAuthenticated, async (req, res) => {
             }
         });
 
+        // Delete associated notifications for this post
+        await Notification.deleteMany({ postId: postId });
+
+        req.flash('success', 'Post deleted successfully!');
         res.redirect('/home');
     } catch (err) {
         console.error("Error deleting post:", err);
-        res.status(500).send("Something went wrong while deleting the post.");
+        req.flash('error', 'Something went wrong while deleting the post.');
+        res.status(500).redirect('/home');
     }
 });
 
-//  POST route to handle liking/unliking a post
+// POST route to handle liking/unliking a post
 router.post('/like/:id', isAuthenticated, async (req, res) => {
     try {
         const postId = req.params.id;
@@ -91,56 +104,99 @@ router.post('/like/:id', isAuthenticated, async (req, res) => {
         const post = await Post.findById(postId);
 
         if (!post) {
-            return res.status(404).send("Post not found.");
+            req.flash('error', 'Post not found.');
+            return res.status(404).redirect('/home');
         }
 
-        // Check if the user has already liked the post
         const likedIndex = post.likes.findIndex(like => like.equals(userId));
 
         if (likedIndex === -1) {
             // User has not liked it, so add their like
             post.likes.push(userId);
+
+            // NEW: Create a notification if the liker is not the post owner
+            if (!post.userId.equals(userId)) {
+                const existingNotification = await Notification.findOne({
+                    recipientId: post.userId,
+                    senderId: userId,
+                    postId: postId,
+                    type: 'like',
+                    read: false // Only check for unread notifications
+                });
+
+                if (!existingNotification) {
+                    await Notification.create({
+                        recipientId: post.userId,
+                        senderId: userId,
+                        postId: postId,
+                        type: 'like'
+                    });
+                }
+            }
         } else {
             // User has liked it, so remove their like (unlike)
             post.likes.splice(likedIndex, 1);
+
+            // NEW: If unliked, delete any unread like notification from this sender for this post
+            await Notification.deleteOne({
+                recipientId: post.userId,
+                senderId: userId,
+                postId: postId,
+                type: 'like',
+                read: false
+            });
         }
 
         await post.save();
-        res.redirect('/home'); // Redirect back to home to see the updated like count/status
+        res.redirect('/home');
     } catch (err) {
         console.error("Error liking/unliking post:", err);
-        res.status(500).send("Something went wrong with liking/unliking the post.");
+        req.flash('error', 'Something went wrong with liking/unliking the post.');
+        res.status(500).redirect('/home');
     }
 });
 
-// NEW FEATURE: POST route to handle adding a comment to a post
+// POST route to handle adding a comment to a post
 router.post('/comment/:id', isAuthenticated, async (req, res) => {
     try {
         const postId = req.params.id;
         const userId = req.user._id;
-        const commentText = req.body.commentText; // Assuming input field name is 'commentText'
+        const commentText = req.body.commentText;
 
         if (!commentText || commentText.trim() === '') {
-            return res.status(400).send("Comment cannot be empty.");
+            req.flash('error', 'Comment cannot be empty.');
+            return res.status(400).redirect('/home');
         }
 
         const post = await Post.findById(postId);
 
         if (!post) {
-            return res.status(404).send("Post not found.");
+            req.flash('error', 'Post not found.');
+            return res.status(404).redirect('/home');
         }
 
-        // Add the new comment to the post's comments array
         post.comments.push({
             userId: userId,
             text: commentText.trim()
         });
 
+        // NEW: Create a notification if the commenter is not the post owner
+        if (!post.userId.equals(userId)) {
+            await Notification.create({
+                recipientId: post.userId,
+                senderId: userId,
+                postId: postId,
+                type: 'comment',
+                commentText: commentText.trim().substring(0, 50) + (commentText.trim().length > 50 ? '...' : '') // Store a preview
+            });
+        }
+
         await post.save();
-        res.redirect('/home'); // Redirect back to home to see the new comment
+        res.redirect('/home');
     } catch (err) {
         console.error("Error adding comment:", err);
-        res.status(500).send("Something went wrong with adding the comment.");
+        req.flash('error', 'Something went wrong with adding the comment.');
+        res.status(500).redirect('/home');
     }
 });
 
