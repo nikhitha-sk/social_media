@@ -70,17 +70,17 @@
             object-fit: cover;
             border: 2px solid #ddd;
         }
-        .icon-group { /* New container for notification and DM icons */
+        .icon-group {
             display: flex;
-            gap: 15px; /* Space between icons */
+            gap: 15px;
             align-items: center;
         }
-        .notification-icon-container, .dm-icon-container {
+        .notification-icon-container, .dm-icon-container, .chatbot-icon-container { /* Added .chatbot-icon-container */
             position: relative;
             cursor: pointer;
             padding: 10px;
         }
-        .notification-icon, .dm-icon {
+        .notification-icon, .dm-icon, .chatbot-icon { /* Added .chatbot-icon */
             font-size: 1.8em;
             color: #555;
         }
@@ -418,13 +418,17 @@
             </div>
         </div>
 
-        <a href="/messages" class="dm-icon-container"> <!-- Link to a general messages inbox -->
+        <a href="/messages" class="dm-icon-container">
             <i class="fas fa-paper-plane dm-icon"></i>
             <% if (dmUnreadCount > 0) { %>
                 <span class="dm-badge" id="dmBadgeCount"><%= dmUnreadCount %></span>
             <% } else { %>
                 <span class="dm-badge" id="dmBadgeCount" style="display:none;">0</span>
             <% } %>
+        </a>
+
+        <a href="/chatbot" class="chatbot-icon-container"> <!-- NEW: Chatbot Icon -->
+            <i class="fas fa-robot chatbot-icon"></i> <!-- You can also use fa-comments or fa-robot -->
         </a>
     </div>
 </div>
@@ -526,7 +530,7 @@
 <script>
     // Socket.IO client setup for real-time DM badge updates
     const socket = io('<%= process.env.CLIENT_URL || "http://localhost:3000" %>', {
-        withCredentials: true // Essential for session/passport to work
+        withCredentials: true
     });
 
     const dmBadgeCount = document.getElementById('dmBadgeCount');
@@ -654,12 +658,12 @@
 
     window.onclick = function(event) {
         if (!event.target.matches('.notification-icon-container') && !event.target.closest('.notification-icon-container') &&
-            !event.target.matches('.dm-icon-container') && !event.target.closest('.dm-icon-container')) { // Added DM icon check
+            !event.target.matches('.dm-icon-container') && !event.target.closest('.dm-icon-container') &&
+            !event.target.matches('.chatbot-icon-container') && !event.target.closest('.chatbot-icon-container')) { // Added chatbot icon check
             
             if (notificationsDropdown.classList.contains('show')) {
                 notificationsDropdown.classList.remove('show');
             }
-            // No dropdown for DMs, so no need to close
         }
     }
 </script>

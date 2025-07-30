@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+            min-height: 100vh;
+        }
+        .message-container {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .chatbot-header {
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .chatbot-header h2 {
+            margin: 0;
+            font-size: 1.8em;
+            flex-grow: 1;
+            text-align: center;
+        }
+        .chat-box {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            min-height: 500px; /* Increased height for chat area */
+            max-height: 80vh; /* Max height to fit screen */
+        }
+        .messages-area {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-start; /* Align messages to top of their container */
+        }
+        .message.user {
+            justify-content: flex-end;
+        }
+        .message.bot {
+            justify-content: flex-start;
+        }
+        .message-bubble {
+            max-width: 75%; /* Slightly wider bubbles */
+            padding: 12px 18px;
+            border-radius: 20px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            font-size: 0.95em;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .message.user .message-bubble {
+            background-color: #007bff;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        .message.bot .message-bubble {
+            background-color: #e0e0e0;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        .message-time {
+            font-size: 0.75em;
+            color: #888;
+            margin-top: 5px;
+            text-align: right;
+        }
+        .message.bot .message-time {
+            text-align: left;
+        }
+        .message-input-form {
+            display: flex;
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            gap: 10px;
+        }
+        .message-input-form input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 1em;
+        }
+        .message-input-form button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+        }
+        .message-input-form button:hover {
+            background-color: #218838;
+        }
+        .loading-indicator {
+            text-align: center;
+            padding: 10px;
+            color: #777;
+            font-style: italic;
+        }
+        .back-link {
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="message-container">
+    <% if (success_msg && success_msg.length > 0) { %>
+        <div class="alert alert-success">
+            <%= success_msg %>
+        </div>
+    <% } %>
+    <% if (error_msg && error_msg.length > 0) { %>
+        <div class="alert alert-danger">
+            <%= error_msg %>
+        </div>
+    <% } %>
+</div>
+
+<div class="chatbot-header">
+    <a href="/home"><i class="fas fa-arrow-left" style="font-size: 1.5em; color: #555;"></i></a>
+    <h2>AI Chatbot</h2>
+</div>
+
+<div class="chat-box">
+    <div class="messages-area" id="messagesArea">
+        <!-- Chat messages will be loaded here -->
+        <% if (chatHistory && chatHistory.length > 0) { %>
+            <% chatHistory.forEach(chatTurn => { %>
+                <div class="message <%= chatTurn.role === 'user' ? 'user' : 'bot' %>">
+                    <div class="message-bubble">
+                        <%= chatTurn.parts[0].text %>
+                        <div class="message-time"><%= new Date().toLocaleString() %></div> <!-- Timestamp for existing messages -->
+                    </div>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <p style="text-align: center; color: #777;">Start a conversation with the AI!</p>
+        <% } %>
+    </div>
+    <div id="loadingIndicator" class="loading-indicator" style="display:none;">Bot is typing...</div>
+    <form class="message-input-form" id="messageForm">
+        <input type="text" id="messageInput" placeholder="Ask me anything..." autocomplete="off" required>
+        <button type="submit">Send</button>
+    </form>
+</div>
+
+<a href="/home" class="back-link">Back to Home</a>
+
+<script>
+    const messagesArea = document.getElementById('messagesArea');
+    const messageForm = document.getElementById('messageForm');
+    const messageInput = document.getElementById('messageInput');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+
+    // Function to add a message to the chat display
+    function addMessageToChat(text, role) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', role);
+        messageElement.innerHTML = `
+            <div class="message-bubble">
+                ${text}
+                <div class="message-time">${new Date().toLocaleString()}</div>
+            </div>
+        `;
+        messagesArea.appendChild(messageElement);
+        scrollToBottom();
+    }
+
+    // Scroll to the bottom of the chat area
+    function scrollToBottom() {
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+
+    // Handle form submission
+    messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userMessage = messageInput.value.trim();
+        if (!userMessage) return;
+
+        addMessageToChat(userMessage, 'user');
+        messageInput.value = ''; // Clear input
+        messageInput.disabled = true; // Disable input while bot is typing
+        loadingIndicator.style.display = 'block'; // Show loading indicator
+
+        try {
+            const response = await fetch('/chatbot/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: userMessage })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to get bot response.');
+            }
+
+            const data = await response.json();
+            addMessageToChat(data.response, 'bot');
+
+        } catch (error) {
+            console.error('Chatbot error:', error);
+            addMessageToChat(`Error: ${error.message || 'Could not get a response.'}`, 'bot');
+        } finally {
+            messageInput.disabled = false; // Re-enable input
+            loadingIndicator.style.display = 'none'; // Hide loading indicator
+            messageInput.focus(); // Focus input for next message
+            scrollToBottom();
+        }
+    });
+
+    // Initial scroll to bottom on page load (for history)
+    window.onload = scrollToBottom;
+</script>
+
+</body>
+</html>
