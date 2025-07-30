@@ -65,22 +65,35 @@
             background-color: #218838; /* Darker green on hover */
             transform: translateY(-1px); /* Slight lift effect */
         }
-        a {
-            color: #007bff; /* Blue links */
+        .auth-link {
+            color: #007bff;
             text-decoration: none;
             margin-top: 10px;
-            display: block; /* Each link on new line */
+            display: block;
             font-size: 0.95em;
             transition: color 0.2s ease;
+            padding: 8px 0;
         }
-        a:hover {
+        .auth-link:hover {
             text-decoration: underline;
             color: #0056b3;
         }
-        p {
-            color: red;
+        /* Styles for flash messages */
+        .flash-message {
             margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
             font-weight: bold;
+        }
+        .flash-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .flash-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
     </style>
 </head>
@@ -88,15 +101,20 @@
 
 <div class="signup-container">
     <h2>Sign Up</h2>
+
+    <% if (success_msg && success_msg.length > 0) { %>
+        <p class="flash-message success"><%= success_msg %></p>
+    <% } %>
+    <% if (error_msg && error_msg.length > 0) { %>
+        <p class="flash-message error"><%= error_msg %></p>
+    <% } %>
+
     <form method="POST" action="/signup">
         <input type="email" name="email" placeholder="Email" required>
         <input type="password" name="password" placeholder="Password" required>
         <button type="submit">Sign Up</button>
     </form>
-    <a href="/login">Login</a>
-    <% if (error) { %>
-        <p><%= error %></p>
-    <% } %>
+    <a href="/login" class="auth-link">Login</a>
 </div>
 
 </body>

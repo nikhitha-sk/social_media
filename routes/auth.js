@@ -2,13 +2,13 @@ const express = require('express');
 const passport = require('passport');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
-// const Post = require('../models/Post'); // Post model is not used in auth routes, can be removed if not needed elsewhere in this file
 
 const router = express.Router();
 
 // Middleware to check if user is logged in
 function isLoggedIn(req, res, next) {
     if (req.isAuthenticated()) return next();
+    req.flash('error', 'Please log in to view this page.'); // Added flash message
     res.redirect('/login');
 }
 
@@ -20,12 +20,12 @@ router.get('/', (req, res) => {
 
 // Login page
 router.get('/login', (req, res) => {
-    res.render('login', { error: null });
+    res.render('login', { error: req.flash('error') }); // Pass flash error messages
 });
 
 // Signup page
 router.get('/signup', (req, res) => {
-    res.render('signup', { error: null });
+    res.render('signup', { error: req.flash('error') }); // Pass flash error messages
 });
 
 // Nickname page - ensure user sets nickname after login/signup
@@ -34,30 +34,45 @@ router.get('/nickname', isLoggedIn, (req, res) => {
     res.render('nickname');
 });
 
-// IMPORTANT: The /home route that was here previously has been REMOVED.
-// It should now ONLY exist in routes/index.js to avoid conflicts.
-
 // Logout
 router.get('/logout', (req, res, next) => {
     req.logout(err => {
         if (err) return next(err);
+        req.flash('success', 'You have been logged out.'); // Optional: success message on logout
         res.redirect('/login');
     });
 });
 
 // Signup logic
-router.post('/signup', async (req, res) => {
+router.post('/signup', async (req, res, next) => { // Added 'next' for req.logIn callback
     const { email, password } = req.body;
 
-    const existing = await User.findOne({ email });
-    if (existing) {
-        return res.render('signup', { error: 'User already exists. Please login instead.' });
+    try {
+        const existing = await User.findOne({ email });
+        if (existing) {
+            req.flash('error', 'User already exists. Please login instead.'); // Use flash for error
+            return res.redirect('/signup'); // Redirect back to signup page
+        }
+
+        const hashed = await bcrypt.hash(password, 10);
+        const newUser = await User.create({ email, password: hashed }); // Store the created user
+
+        // NEW: Automatically log in the newly created user
+        req.logIn(newUser, err => {
+            if (err) {
+                console.error("Error logging in after signup:", err);
+                req.flash('error', 'Failed to log in after signup. Please try logging in manually.');
+                return next(err); // Pass error to Express error handler
+            }
+            req.flash('success', 'Account created successfully! Please choose a nickname.');
+            res.redirect('/nickname'); // Redirect to nickname page after successful login
+        });
+
+    } catch (err) {
+        console.error("Error during signup:", err);
+        req.flash('error', 'An error occurred during signup. Please try again.');
+        res.status(500).redirect('/signup'); // Redirect back to signup on server error
     }
-
-    const hashed = await bcrypt.hash(password, 10);
-    await User.create({ email, password: hashed });
-
-    res.redirect('/login');
 });
 
 // Login logic
@@ -66,11 +81,13 @@ router.post('/login', (req, res, next) => {
         if (err) return next(err);
 
         if (!user) {
-            return res.render('login', { error: info.message });
+            req.flash('error', info.message); // Use flash for error
+            return res.redirect('/login'); // Redirect back to login page
         }
 
         req.logIn(user, err => {
             if (err) return next(err);
+            req.flash('success', 'Logged in successfully!'); // Optional: success message on login
             return res.redirect('/nickname');
         });
     })(req, res, next);
@@ -79,14 +96,22 @@ router.post('/login', (req, res, next) => {
 // Nickname POST
 router.post('/nickname', isLoggedIn, async (req, res, next) => {
     if (!req.user) {
+        req.flash('error', 'You must be logged in to set a nickname.');
         return res.redirect('/login');
     }
-    await User.findByIdAndUpdate(req.user._id, { nickname: req.body.nickname });
-    const updatedUser = await User.findById(req.user._id);
-    req.login(updatedUser, (err) => {
-        if (err) return next(err);
-        res.redirect('/home');
-    });
+    try {
+        await User.findByIdAndUpdate(req.user._id, { nickname: req.body.nickname });
+        const updatedUser = await User.findById(req.user._id);
+        req.login(updatedUser, (err) => {
+            if (err) return next(err);
+            req.flash('success', 'Nickname saved!');
+            res.redirect('/home');
+        });
+    } catch (err) {
+        console.error("Error setting nickname:", err);
+        req.flash('error', 'Failed to save nickname.');
+        res.status(500).redirect('/nickname');
+    }
 });
 
 // Google Auth initiation
@@ -94,8 +119,11 @@ router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 
 
 // Google Auth callback
 router.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }),
-    (req, res) => res.redirect('/nickname')
+    passport.authenticate('google', { failureRedirect: '/login', failureFlash: true }), // Added failureFlash
+    (req, res) => {
+        req.flash('success', 'Logged in with Google successfully!');
+        res.redirect('/nickname');
+    }
 );
 
 module.exports = router;
